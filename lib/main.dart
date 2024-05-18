@@ -1,85 +1,49 @@
-// ignore_for_file: prefer_const_literals_to_create_immutables, prefer_const_constructors
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'dart:async';
+import 'crypto_service.dart';
 
 void main() {
-  runApp(const MainApp());
+  runApp(MyApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({Key? key}) : super(key: key);
-
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: PageView(
-        children: [
-          kIsWeb ? WebScreen1() : IosScreen1(),
-          kIsWeb ? WebScreen2() : IosScreen2(),
-        ],
+      title: 'Crypto App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
       ),
-      theme: ThemeData.dark(),
+      home: WelcomeScreen(),
     );
   }
 }
 
-class IosScreen1 extends StatelessWidget {
+class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home page - iOS'),
+        title: Text('Welcome'),
       ),
-      body: Stack(
-        children: <Widget>[
-          Center(
-            child: Text(
-              'Добро пожаловать на iOS!',
-              textDirection: TextDirection.ltr,
-              style: TextStyle(fontSize: 30.0),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text(
+              'Welcome to the Crypto App!',
+              style: Theme.of(context).textTheme.headline4,
             ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Text('Свайпните вправо, чтобы продолжить ->',
-                  textDirection: TextDirection.ltr),
+            ElevatedButton(
+              child: Text('Go to Crypto Data'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => IosScreen2()),
+                );
+              },
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class WebScreen1 extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Home page - Web'),
-      ),
-      body: Stack(
-        children: <Widget>[
-          Center(
-            child: Text(
-              'Добро пожаловать на Web!',
-              textDirection: TextDirection.ltr,
-              style: TextStyle(fontSize: 30.0),
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Text('Перелистните вправо, чтобы продолжить ->',
-                  textDirection: TextDirection.ltr),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -91,146 +55,79 @@ class IosScreen2 extends StatefulWidget {
 }
 
 class _IosScreen2State extends State<IosScreen2> {
-  final _formKey = GlobalKey<FormState>();
-  String _cryptoName = '';
-  String _cryptoAmount = '';
-  Color _backgroundColor = Color.fromARGB(255, 29, 31, 42);
-
-  void _buyCrypto() {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      final message = 'Куплено: $_cryptoName, Количество: $_cryptoAmount';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-      setState(() {
-        _backgroundColor = Colors.green;
-      });
-      Timer(Duration(seconds: 1), () {
-        setState(() {
-          _backgroundColor = Color.fromARGB(255, 29, 31, 42);
-        });
-      });
-    }
-  }
-
-  void _sellCrypto() {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      final message = 'Продано: $_cryptoName, Количество: $_cryptoAmount';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-      setState(() {
-        _backgroundColor = Colors.red;
-      });
-      Timer(Duration(seconds: 1), () {
-        setState(() {
-          _backgroundColor = Color.fromARGB(255, 29, 31, 42);
-        });
-      });
-    }
-  }
+  CryptoService _cryptoService = CryptoService();
+  Future<Crypto>? _futureCrypto;
+  final _controller = TextEditingController();
+  double? _totalCost;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _backgroundColor,
-      appBar: AppBar(
-        title: Text('Trade screen - iOS'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: <Widget>[
-            TextFormField(
-              decoration: InputDecoration(labelText: 'Название криптовалюты'),
-              onSaved: (value) => _cryptoName = value!,
-              validator: (value) => value!.isEmpty ? 'Введите название криптовалюты' : null,
-            ),
-            TextFormField(
-              decoration: InputDecoration(labelText: 'Количество'),
-              onSaved: (value) => _cryptoAmount = value!,
-              validator: (value) => value!.isEmpty ? 'Введите количество' : null,
-            ),
-            ElevatedButton(
-              onPressed: _buyCrypto,
-              child: Text('Купить'),
-            ),
-            ElevatedButton(
-              onPressed: _sellCrypto,
-              child: Text('Продать'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class WebScreen2 extends StatefulWidget {
-  @override
-  _WebScreen2State createState() => _WebScreen2State();
-}
-
-class _WebScreen2State extends State<WebScreen2> {
-  final _formKey = GlobalKey<FormState>();
-  String _cryptoName = 'Биткойн';
-  String _cryptoAmount = '';
-  final List<String> _cryptos = ['Биткойн', 'Эфириум', 'Рипл'];
-
-  void _buyCrypto() {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      final message = 'Куплено: $_cryptoName, Количество: $_cryptoAmount';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-    }
+  void initState() {
+    super.initState();
+    _futureCrypto = _cryptoService.fetchCryptoData();
   }
 
-  void _sellCrypto() {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      final message = 'Продано: $_cryptoName, Количество: $_cryptoAmount';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-    }
+  void refreshData() {
+    setState(() {
+      _futureCrypto = _cryptoService.fetchCryptoData();
+    });
+  }
+
+  void calculateTotalCost(String text) {
+    double quantity = double.tryParse(text) ?? 0;
+    setState(() {
+      var snapshot;
+      _totalCost = quantity * (double.tryParse(snapshot.data?.price ?? '0') ?? 0);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Добро пожаловать в веб версию!'),
+        title: Text('Crypto Data'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: refreshData,
+          ),
+        ],
       ),
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: <Widget>[
-            DropdownButton<String>(
-              value: _cryptoName,
-              items: _cryptos.map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _cryptoName = newValue!;
-                });
-              },
+      body: FutureBuilder<Crypto>(
+        future: _futureCrypto,
+        builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const CircularProgressIndicator();
+    } else if (snapshot.hasError) {
+      return Text('Error: ${snapshot.error.toString() ?? 'Unknown error'}');
+    } else if (snapshot.hasData) {
+      var crypto = snapshot.data!;
+      return Column(
+        children: [
+          ListTile(
+            title: Text(crypto.name),
+            subtitle: Text(crypto.price),
+          ),
+          TextField(
+            controller: _controller,
+            onChanged: (text) {
+              double quantity = double.tryParse(text) ?? 0;
+              setState(() {
+                _totalCost = quantity * (double.tryParse(crypto.price) ?? 0);
+              });
+            },
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Enter quantity',
             ),
-            TextFormField(
-              decoration: InputDecoration(labelText: 'Количество'),
-              onSaved: (value) => _cryptoAmount = value!,
-              validator: (value) => value!.isEmpty ? 'Введите количество' : null,
-            ),
-            ElevatedButton(
-              onPressed: _buyCrypto,
-              child: Text('Купить'),
-            ),
-            ElevatedButton(
-              onPressed: _sellCrypto,
-              child: Text('Продать'),
-            ),
-          ],
-        ),
-      ),
+          ),
+          Text('Total cost: \$${_totalCost ?? 0}'),
+        ],
+      );
+    } else {
+      return const Text('No data');
+    }
+  },
+),
     );
   }
 }
